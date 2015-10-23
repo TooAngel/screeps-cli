@@ -2,6 +2,7 @@
 
 Usage:
   screeps.py log
+  screeps.py download
 """
 import os
 import logging
@@ -11,6 +12,30 @@ import json
 import requests
 import websocket
 import sys
+
+
+def save(name, data):
+    with open('dist/{}.js'.format(name), 'w') as f:
+        f.write(data)
+
+
+def download(email, password):
+    if not os.path.isdir('dist'):
+        os.mkdir('dist')
+
+    url = 'https://screeps.com/api/user/code'
+    auth = (email, password)
+    response = requests.get(url, auth=auth)
+    response.raise_for_status()
+    data = response.json()
+    for module in data['modules']:
+        if data['modules'][module]:
+            save(module, data['modules'][module])
+        else:
+            try:
+                os.remove('dist/{}.js'.format(module))
+            except OSError:
+                pass
 
 
 class ScreepsWSConnection(object):
@@ -74,7 +99,7 @@ class ScreepsWSConnection(object):
 
 def main():
     logging.basicConfig()
-    _ = docopt(__doc__)
+    arguments = docopt(__doc__)
 
     email = os.environ.get('email')
     password = os.environ.get('password')
@@ -82,8 +107,13 @@ def main():
     if not email or not password:
         sys.exit('Please set email and password as environment variables.')
 
-    swsc = ScreepsWSConnection(email, password)
-    swsc.start()
+    if arguments.get('log'):
+        swsc = ScreepsWSConnection(email, password)
+        swsc.start()
+
+    if arguments.get('download'):
+        download(email, password)
+
 
 if __name__ == '__main__':
     main()
