@@ -2,7 +2,7 @@
 
 Usage:
   screeps.py log
-  screeps.py download
+  screeps.py download [--dest=<directory>] [--ptr] [--debug]
 """
 import os
 import logging
@@ -14,26 +14,41 @@ import websocket
 import sys
 
 
-def save(name, data):
-    with open('dist/{}.js'.format(name), 'w') as f:
+def save(name, data, dest):
+    with open('{}/{}.js'.format(dest, name), 'w') as f:
         f.write(data)
 
 
-def download(email, password):
-    if not os.path.isdir('dist'):
-        os.mkdir('dist')
+def download(email, password, arguments):
+    print(arguments)
+    dest = arguments.get('--dest')
+    if not dest:
+        dest = 'dist'
+
+    if not os.path.isdir(dest):
+        os.mkdir(dest)
 
     url = 'https://screeps.com/api/user/code'
+
+    if arguments.get('--ptr'):
+        url = 'https://screeps.com/ptr/api/user/code?branch=$activeWorld'
+
     auth = (email, password)
     response = requests.get(url, auth=auth)
     response.raise_for_status()
     data = response.json()
+
+    if 'error' in data:
+        sys.exit(data['error'])
+
     for module in data['modules']:
         if data['modules'][module]:
-            save(module, data['modules'][module])
+            if arguments.get('--debug'):
+                print('save {}'.format(module))
+            save(module, data['modules'][module], dest)
         else:
             try:
-                os.remove('dist/{}.js'.format(module))
+                os.remove('{}/{}.js'.format(dest, module))
             except OSError:
                 pass
 
@@ -112,7 +127,7 @@ def main():
         swsc.start()
 
     if arguments.get('download'):
-        download(email, password)
+        download(email, password, arguments)
 
 
 if __name__ == '__main__':
