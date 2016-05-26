@@ -1,3 +1,4 @@
 requests==2.8.1
 websocket-client==0.32.0
 docopt==0.6.2
+screeps

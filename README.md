@@ -1,4 +1,4 @@
-# screeps-cli
+# screeps command line interface
 
 CLI to interact with screeps (https://screeps.com).
 
