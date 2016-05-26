@@ -2,6 +2,7 @@
 
 Usage:
   screeps.py log [--ptr]
+  screeps.py me [--ptr]
   screeps.py download [--dest=<directory>] [--ptr] [--debug]
 """
 import json
@@ -13,12 +14,18 @@ import requests
 
 from docopt import docopt
 from screeps.screeps import Connection
+from pprint import pprint
+import threading
 
 
 def save(name, data, dest):
     with open('{}/{}.js'.format(dest, name), 'w') as f:
         f.write(data)
 
+
+def me(email, password, arguments):
+    connection = Connection(email, password, arguments['--ptr'])
+    pprint(connection.get_me())
 
 def download(email, password, arguments):
     print(arguments)
@@ -67,6 +74,16 @@ def sysout(message):
         return
     print('on_message', message)
 
+class ReadStdin(threading.Thread):
+    def __init__(self, connection):
+        threading.Thread.__init__(self)
+        self.connection = connection
+        self.running = True
+
+    def run(self):
+        while self.running:
+            line = input()
+            self.connection.console(line)
 
 def main():
     logging.basicConfig()
@@ -79,11 +96,19 @@ def main():
         sys.exit('Please set email and password as environment variables.')
 
     if arguments.get('log'):
-        swsc = Connection(email, password, arguments['--ptr'])
-        swsc.startWebSocket(sysout)
+        connection = Connection(email, password, arguments['--ptr'])
+        read_stdin = ReadStdin(connection)
+        try:
+            read_stdin.start()
+            connection.startWebSocket(sysout)
+        except KeyboardInterrupt:
+            read_stdin.running = False
 
     if arguments.get('download'):
         download(email, password, arguments)
+
+    if arguments.get('me'):
+        me(email, password, arguments)
 
 
 if __name__ == '__main__':
